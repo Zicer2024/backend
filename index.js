@@ -391,19 +391,19 @@ app.post("/searchEvents", async (req, res) => {
       const rowOrganiser = organiserRows.find(
         (org) => org.ime === row.organizator
       );
-  
+
       if (!rowOrganiser) {
         return row;
       }
-  
+
       const location = {
         address: rowOrganiser.lokacija,
       };
-  
+
       try {
         // Geocode the address to get latitude and longitude
         const geocodeRes = await geocoder.geocode(location.address);
-  
+
         if (geocodeRes.length > 0) {
           location.latitude = geocodeRes[0].latitude;
           location.longitude = geocodeRes[0].longitude;
@@ -411,7 +411,7 @@ app.post("/searchEvents", async (req, res) => {
       } catch (err) {
         console.error(`Failed to geocode address: ${location.address}`, err);
       }
-  
+
       return {
         ...row,
         location,
@@ -419,11 +419,65 @@ app.post("/searchEvents", async (req, res) => {
     })
   );
 
-  //   if (sort.param === "earliest") {
+  if (!sort || sort.param === "earliest") {
+    updatedResult.sort((a, b) => {
+      const dateA = parseCustomDateString(a["datum i vrijeme početka"]);
+      const dateB = parseCustomDateString(b["datum i vrijeme početka"]);
 
-  //   } else {
+      const comparison = dateA - dateB;
+      return sort?.reverse ? -comparison : comparison;
+    });
+  } else if (sort.param === "location") {
+    const referenceLatitude = sort?.latitude || 45.815; // Default: Zagreb center
+    const referenceLongitude = sort?.longitude || 15.9819;
 
-  //   }
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const toRad = (value) => (value * Math.PI) / 180;
+      const R = 6371; // Earth's radius in kilometers
+
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) *
+          Math.cos(toRad(lat2)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    updatedResult.sort((a, b) => {
+      const locationA = a.location || {};
+      const locationB = b.location || {};
+
+      const hasCoordinatesA =
+        locationA.latitude !== undefined && locationA.longitude !== undefined;
+      const hasCoordinatesB =
+        locationB.latitude !== undefined && locationB.longitude !== undefined;
+
+      if (!hasCoordinatesA && !hasCoordinatesB) return 0;
+      if (!hasCoordinatesA) return 1;
+      if (!hasCoordinatesB) return -1;
+
+      const distanceA = calculateDistance(
+        referenceLatitude,
+        referenceLongitude,
+        locationA.latitude,
+        locationA.longitude
+      );
+      const distanceB = calculateDistance(
+        referenceLatitude,
+        referenceLongitude,
+        locationB.latitude,
+        locationB.longitude
+      );
+
+      const comparison = distanceA - distanceB;
+      return sort?.reverse ? -comparison : comparison;
+    });
+  }
 
   res.status(200).json({
     events: updatedResult,

@@ -1,29 +1,48 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import sqlite3 from 'sqlite3';
-
-dotenv.config();
+import express from "express";
+import sqlite3 from "sqlite3";
 
 const app = express();
 const port = process.env.PORT || 3456;
+const dbName = process.env.DB || "database.db";
 
-const db = new sqlite3.Database('./database.db', (err) => {
+const db = new sqlite3.Database(dbName, (err) => {
   if (err) {
-    console.error('Error connecting to SQLite:', err.message);
+    console.error("Failed to connect to the database:", err.message);
   } else {
-    console.log('Connected to SQLite database.');
+    console.log("Connected to SQLite database.");
   }
 });
 
-app.get("/", (req, res) => {
-  db.all(`SELECT * FROM test`, [], (err, rows) => {
-    if (err) {
-      console.error("Error retrieving data:", err.message);
-      res.status(500).send("Failed to retrieve data.");
-    } else {
-      res.json(rows);
-    }
+const queryDatabase = async (query, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.all(query, params, (err, rows) => {
+      if (err) {
+        console.error("Database error:", err.message);
+        reject("Failed to execute query.");
+      } else {
+        resolve(rows);
+      }
+    });
   });
+};
+
+app.get("/events", async (req, res) => {
+  try {
+    const rows = await queryDatabase("SELECT * FROM eventi");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/data/:table", async (req, res) => {
+  const tableName = req.params.table;
+  try {
+    const rows = await queryDatabase(`SELECT * FROM "${tableName}"`);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
 app.listen(port, () => {

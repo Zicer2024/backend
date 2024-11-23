@@ -195,9 +195,7 @@ app.get("/columnValues", async (req, res) => {
 
   try {
     const results = await Promise.all(
-      tableNames.map((tableName) =>
-        getSortedColumnValues(tableName, "ime")
-      )
+      tableNames.map((tableName) => getSortedColumnValues(tableName, "ime"))
     );
 
     res.json({
@@ -213,6 +211,179 @@ app.get("/columnValues", async (req, res) => {
       error: err.message,
     });
   }
+});
+
+const buildEventSearchQuery = (
+  categories,
+  eventTypes,
+  organizers,
+  ageGroups
+) => {
+  let query = `
+      SELECT e.*
+      FROM eventi e
+    `;
+
+  let whereClauseAdded = false;
+
+  if (categories && categories.length > 0) {
+    const categoriesList = categories
+      .map((cat) => `'${cat.replace("'", "''")}'`)
+      .join(", ");
+    query += ` ${
+      whereClauseAdded ? "AND" : "WHERE"
+    } e.kategorija IN (${categoriesList})`;
+    whereClauseAdded = true;
+  }
+
+  if (eventTypes && eventTypes.length > 0) {
+    const eventTypesList = eventTypes
+      .map((type) => `'${type.replace("'", "''")}'`)
+      .join(", ");
+    query += ` ${
+      whereClauseAdded ? "AND" : "WHERE"
+    } e.tip IN (${eventTypesList})`;
+    whereClauseAdded = true;
+  }
+
+  if (organizers && organizers.length > 0) {
+    const organizersList = organizers
+      .map((org) => `'${org.replace("'", "''")}'`)
+      .join(", ");
+    query += ` ${
+      whereClauseAdded ? "AND" : "WHERE"
+    } e.organizator IN (${organizersList})`;
+    whereClauseAdded = true;
+  }
+
+  if (ageGroups && ageGroups.length > 0) {
+    const ageGroupsList = ageGroups
+      .map((group) => `'${group.replace("'", "''")}'`)
+      .join(", ");
+    query += ` ${
+      whereClauseAdded ? "AND" : "WHERE"
+    } c.dobna_skupina IN (${ageGroupsList})`;
+    whereClauseAdded = true;
+  }
+
+  return query;
+};
+
+function parseCustomDateString(dateString) {
+  const parts = dateString.split(" ");
+  const day = parseInt(parts[0].slice(0, -1));
+  const month = parseInt(parts[1].slice(0, -1));
+  const year = parseInt(parts[2]);
+  const timePart = parts[3].split(":");
+  const hours = parseInt(timePart[0]);
+  const minutes = parseInt(timePart[1]);
+
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
+app.post("/searchEvents", async (req, res) => {
+  const {
+    categories,
+    eventTypes,
+    organizers,
+    ageGroups,
+    accessibility,
+    startDate,
+    endDate,
+    sort,
+  } = req.body;
+
+  const parsedStartDate = startDate ? new Date(startDate) : null;
+  const parsedEndDate = endDate ? new Date(endDate) : null;
+
+  const query = buildEventSearchQuery(
+    categories,
+    eventTypes,
+    organizers,
+    ageGroups
+  );
+  const rows = await queryDatabase(query);
+
+  const filteredByDate = rows.filter((row) => {
+    const rowDate = row["datum i vrijeme početka"];
+    const parsedRowDate = parseCustomDateString(rowDate);
+
+    const rowDateOnly = new Date(
+      parsedRowDate.getFullYear(),
+      parsedRowDate.getMonth(),
+      parsedRowDate.getDate()
+    );
+
+    const startDateOnly =
+      parsedStartDate &&
+      new Date(
+        parsedStartDate.getFullYear(),
+        parsedStartDate.getMonth(),
+        parsedStartDate.getDate()
+      );
+    const endDateOnly =
+      parsedEndDate &&
+      new Date(
+        parsedEndDate.getFullYear(),
+        parsedEndDate.getMonth(),
+        parsedEndDate.getDate()
+      );
+
+    const dateInRange =
+      (!startDateOnly || rowDateOnly >= startDateOnly) &&
+      (!endDateOnly || rowDateOnly <= endDateOnly);
+
+    return dateInRange;
+  });
+
+  let filteredByAccessibility = null;
+
+  if (accessibility && accessibility.length > 0) {
+    const organiserRows = await queryDatabase("SELECT * FROM organizatori");
+    filteredByAccessibility = filteredByDate.filter((row) => {
+      const parking = accessibility.includes("kids");
+      const disabled = accessibility.includes("disabled");
+      const pets = accessibility.includes("pets");
+      let parkingCondition = true;
+      let disabledCondition = true;
+      let petsCondition = true;
+
+      const rowOrganiser = organiserRows.find(
+        (org) => org.ime == row.organizator
+      );
+
+      if (!rowOrganiser) {
+        return false;
+      }
+
+      if (parking) {
+        parkingCondition = rowOrganiser["Ustanova ima parking"] != null;
+      }
+      if (disabled) {
+        disabledCondition =
+          rowOrganiser["Ulaz prilagođen osobama s invaliditetom"] != null;
+      }
+      if (pets) {
+        petsCondition = rowOrganiser["Dopušten ulazak ljubimcima"] != null;
+      }
+
+      return parkingCondition && disabledCondition && petsCondition;
+    });
+  }
+
+  const result = filteredByAccessibility ?? filteredByDate;
+
+  if (sort.param === "earliest") {
+
+  } else {
+
+  }
+
+  res.status(200).json({
+    events: result,
+    success: true,
+    message: "Received search parameters.",
+  });
 });
 
 app.listen(port, () => {

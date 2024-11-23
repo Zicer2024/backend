@@ -124,6 +124,31 @@ app.post("/login", async (req, res) => {
   }
 });
 
+const getSortedColumnValues = async (tableName, columnName, res) => {
+  try {
+    const rows = await queryDatabase(`SELECT * FROM ${tableName}`);
+    res.json(rows.map((row) => row[columnName]).sort());
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
+
+app.get("/categories", async (req, res) => {
+  await getSortedColumnValues("kategorije", "ime", res);
+});
+
+app.get("/eventTypes", async (req, res) => {
+  await getSortedColumnValues("tipovi_dogadaja", "ime", res);
+});
+
+app.get("/organizers", async (req, res) => {
+  await getSortedColumnValues("organizatori", "ime", res);
+});
+
+app.get("/ageGroups", async (req, res) => {
+  await getSortedColumnValues("dobne_skupine", "ime", res);
+});
+
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });

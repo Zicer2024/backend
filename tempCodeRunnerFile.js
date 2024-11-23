@@ -1,0 +1,1 @@
+.map((row) => row.ime)

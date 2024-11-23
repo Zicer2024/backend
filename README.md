@@ -40,7 +40,7 @@ http://localhost:3456
   }
   ```
 - **Responses**:
-  - `201`:
+  - `201`: 
     ```json
     {
       "success": true,
@@ -104,3 +104,68 @@ http://localhost:3456
     }
     ```
 
+---
+
+### 4. Get Categories
+- **URL**: `/categories`
+- **Method**: `GET`
+- **Description**: Returns a sorted list of all category names from the `kategorije` table.
+- **Responses**:
+  - `200`: Returns an array of category names.
+    ```json
+    [
+      "Category1",
+      "Category2",
+      "Category3"
+    ]
+    ```
+  - `500` (Server error)
+
+---
+
+### 5. Get Event Types
+- **URL**: `/eventTypes`
+- **Method**: `GET`
+- **Description**: Returns a sorted list of all event type names from the `tipovi_dogadaja` table.
+- **Responses**:
+  - `200`: Returns an array of event type names.
+    ```json
+    [
+      "EventType1",
+      "EventType2",
+      "EventType3"
+    ]
+    ```
+  - `500` (Server error)
+
+---
+
+### 6. Get Organizers
+- **URL**: `/organizers`
+- **Method**: `GET`
+- **Description**: Returns a sorted list of all organizer names from the `organizatori` table.
+- **Responses**:
+  - `200`: Returns an array of organizer names.
+    ```json
+    [
+      "Organizer1",
+      "Organizer2",
+      "Organizer3"
+    ]
+    ```
+  - `500` (Server error)
+
+### 7. Get Age Groups
+- **URL**: `/ageGroups`
+- **Method**: `GET`
+- **Description**: Returns a sorted list of all age groups from the `dobne_skupine` table.
+- **Responses**:
+  - `200`: Returns an array of age groups.
+    ```json
+    [
+        "djeca (0-15)",
+        "mladi (16-29)",
+        "odrasli (30+)"
+    ]
+    ```
+  - `500` (Server error)

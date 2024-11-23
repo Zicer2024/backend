@@ -2,6 +2,10 @@ import express from "express";
 import sqlite3 from "sqlite3";
 import bcrypt from "bcrypt";
 import cors from "cors";
+import NodeGeocoder from "node-geocoder";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
@@ -16,6 +20,13 @@ const db = new sqlite3.Database(dbName, (err) => {
     console.log("Connected to SQLite database.");
   }
 });
+
+const options = {
+  provider: "opencage",
+  apiKey: process.env.GEOCODER,
+};
+
+const geocoder = NodeGeocoder(options);
 
 const queryDatabase = async (query, params = []) => {
   return new Promise((resolve, reject) => {
@@ -339,9 +350,9 @@ app.post("/searchEvents", async (req, res) => {
   });
 
   let filteredByAccessibility = null;
+  const organiserRows = await queryDatabase("SELECT * FROM organizatori");
 
   if (accessibility && accessibility.length > 0) {
-    const organiserRows = await queryDatabase("SELECT * FROM organizatori");
     filteredByAccessibility = filteredByDate.filter((row) => {
       const parking = accessibility.includes("kids");
       const disabled = accessibility.includes("disabled");
@@ -375,14 +386,47 @@ app.post("/searchEvents", async (req, res) => {
 
   const result = filteredByAccessibility ?? filteredByDate;
 
-//   if (sort.param === "earliest") {
+  const updatedResult = await Promise.all(
+    result.map(async (row) => {
+      const rowOrganiser = organiserRows.find(
+        (org) => org.ime === row.organizator
+      );
+  
+      if (!rowOrganiser) {
+        return row;
+      }
+  
+      const location = {
+        address: rowOrganiser.lokacija,
+      };
+  
+      try {
+        // Geocode the address to get latitude and longitude
+        const geocodeRes = await geocoder.geocode(location.address);
+  
+        if (geocodeRes.length > 0) {
+          location.latitude = geocodeRes[0].latitude;
+          location.longitude = geocodeRes[0].longitude;
+        }
+      } catch (err) {
+        console.error(`Failed to geocode address: ${location.address}`, err);
+      }
+  
+      return {
+        ...row,
+        location,
+      };
+    })
+  );
 
-//   } else {
+  //   if (sort.param === "earliest") {
 
-//   }
+  //   } else {
+
+  //   }
 
   res.status(200).json({
-    events: result,
+    events: updatedResult,
     success: true,
     message: "Received search parameters.",
   });

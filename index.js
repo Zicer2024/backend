@@ -26,15 +26,6 @@ const queryDatabase = async (query, params = []) => {
   });
 };
 
-app.get("/events", async (req, res) => {
-  try {
-    const rows = await queryDatabase("SELECT * FROM eventi");
-    res.json(rows);
-  } catch (err) {
-    res.status(500).send(err);
-  }
-});
-
 app.get("/data/:table", async (req, res) => {
   const tableName = req.params.table;
   try {

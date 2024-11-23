@@ -354,7 +354,7 @@ app.post("/searchEvents", async (req, res) => {
 
   if (accessibility && accessibility.length > 0) {
     filteredByAccessibility = filteredByDate.filter((row) => {
-      const parking = accessibility.includes("kids");
+      const parking = accessibility.includes("parking");
       const disabled = accessibility.includes("disabled");
       const pets = accessibility.includes("pets");
       let parkingCondition = true;

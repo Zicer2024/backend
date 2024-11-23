@@ -124,29 +124,95 @@ app.post("/login", async (req, res) => {
   }
 });
 
-const getSortedColumnValues = async (tableName, columnName, res) => {
+const getSortedColumnValues = async (tableName, columnName) => {
   try {
     const rows = await queryDatabase(`SELECT * FROM ${tableName}`);
-    res.json(rows.map((row) => row[columnName]).sort());
+    return rows.map((row) => row[columnName]).sort();
   } catch (err) {
-    res.status(500).send(err);
+    throw new Error(err.message);
   }
 };
 
 app.get("/categories", async (req, res) => {
-  await getSortedColumnValues("kategorije", "ime", res);
+  try {
+    const categories = await getSortedColumnValues("kategorije", "ime");
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve categories.",
+      error: err.message,
+    });
+  }
 });
 
 app.get("/eventTypes", async (req, res) => {
-  await getSortedColumnValues("tipovi_dogadaja", "ime", res);
+  try {
+    const eventTypes = await getSortedColumnValues("tipovi_dogadaja", "ime");
+    res.json(eventTypes);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve event types.",
+      error: err.message,
+    });
+  }
 });
 
 app.get("/organizers", async (req, res) => {
-  await getSortedColumnValues("organizatori", "ime", res);
+  try {
+    const organizers = await getSortedColumnValues("organizatori", "ime");
+    res.json(organizers);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve organizers.",
+      error: err.message,
+    });
+  }
 });
 
 app.get("/ageGroups", async (req, res) => {
-  await getSortedColumnValues("dobne_skupine", "ime", res);
+  try {
+    const ageGroups = await getSortedColumnValues("dobne_skupine", "ime");
+    res.json(ageGroups);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve age groups.",
+      error: err.message,
+    });
+  }
+});
+
+app.get("/columnValues", async (req, res) => {
+  const tableNames = [
+    "kategorije",
+    "tipovi_dogadaja",
+    "organizatori",
+    "dobne_skupine",
+  ];
+
+  try {
+    const results = await Promise.all(
+      tableNames.map((tableName) =>
+        getSortedColumnValues(tableName, "ime")
+      )
+    );
+
+    res.json({
+      categories: results[0],
+      event_types: results[1],
+      organizers: results[2],
+      age_groups: results[3],
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve filter names.",
+      error: err.message,
+    });
+  }
 });
 
 app.listen(port, () => {

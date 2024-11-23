@@ -163,9 +163,41 @@ http://localhost:3456
   - `200`: Returns an array of age groups.
     ```json
     [
+      "djeca (0-15)",
+      "mladi (16-29)",
+      "odrasli (30+)"
+    ]
+    ```
+  - `500` (Server error)
+
+### 8. Get Column Values
+- **URL**: `/columnValues`
+- **Method**: `GET`
+- **Description**: Returns an union of 4 requests above.
+- **Responses**:
+  - `200`: Returns an object with arrays of results.
+    ```json
+    {
+      "categories": [
+        "Category1",
+        "Category2",
+        "Category3"
+      ],
+      "event_types": [
+        "EventType1",
+        "EventType2",
+        "EventType3"
+      ],
+      "organizers": [
+        "Organizer1",
+        "Organizer2",
+        "Organizer3"
+      ],
+      "age_groups": [
         "djeca (0-15)",
         "mladi (16-29)",
         "odrasli (30+)"
-    ]
+      ]
+    }
     ```
   - `500` (Server error)
